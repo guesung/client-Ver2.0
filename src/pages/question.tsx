@@ -1,26 +1,17 @@
 import Button from '@components/common/Button';
 import GoogleAd from '@components/common/GoogleAd';
+import Loader from '@components/common/Loader';
 import ProgressBar from '@components/common/ProgressBar';
+import ResultLoader from '@components/common/ResultLoader';
 import TopBar from '@components/common/TopBar';
 import { getUserQuestion, getUserResult } from 'api/getUserQuestion';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import { useSetRecoilState } from 'recoil';
-import { UserRecommendation } from 'store/atom';
-interface QuestionContentType {
-  id: number;
-  content: string;
-  number: number;
-}
-
-interface QuestionDataType {
-  answers: QuestionContentType[];
-  content: string;
-  id: number;
-  imageUrl: string;
-  number: number;
-}
+import { useRecoilValue, useSetRecoilState } from 'recoil';
+import { IsLoading, UserRecommendation } from 'store/atom';
+import { QuestionDataType } from 'types/getUserQuestion';
+import Result from './result';
 
 export const getStaticProps = async () => {
   const { data } = await getUserQuestion();
@@ -37,6 +28,9 @@ export default function question({ data }: { data: QuestionDataType[] }) {
     { questionNumber: number; answerNumber: number }[]
   >([]);
   const [nickname, setNickname] = useState<string>('');
+  const setUserRecommendation = useSetRecoilState(UserRecommendation);
+  const setIsLoading = useSetRecoilState(IsLoading);
+  const isLoading = useRecoilValue(IsLoading);
 
   useEffect(() => {
     setNickname(localStorage.getItem('nickname') || '');
@@ -44,7 +38,6 @@ export default function question({ data }: { data: QuestionDataType[] }) {
 
   const router = useRouter();
   const MAX_PAGE = 12;
-  const setUserRecommendation = useSetRecoilState(UserRecommendation);
 
   const handleClickQuestion = (clickedIndex: number) => {
     if (currentPage === MAX_PAGE) {
@@ -56,11 +49,12 @@ export default function question({ data }: { data: QuestionDataType[] }) {
           ],
           nickname,
         );
-        const userId = resData.data.data.recommendation.id;
-        setUserRecommendation(userId);
-        router.push(`/result?id=${userId}`);
+        const id = resData.data.data.recommendation.id;
+        setUserRecommendation(id);
+        setIsLoading(true);
+        router.push(`/result/${id}`);
       };
-      return getData();
+      getData();
     }
     setQuestionArray([
       ...questionArray,
@@ -79,6 +73,7 @@ export default function question({ data }: { data: QuestionDataType[] }) {
     return router.back();
   };
 
+  if (currentPage === MAX_PAGE + 1) return <ResultLoader />;
   return (
     <div className="pb-[3rem]">
       <div className="px-4">
@@ -93,9 +88,9 @@ export default function question({ data }: { data: QuestionDataType[] }) {
           currentPage < 10 ? '0' + currentPage : currentPage
         }`}</p>
       </section>
-      <section className="flex flex-col items-center ">
+      <section className="flex flex-col items-center">
         <Image
-          className="mb-[2rem] rounded-[1.25rem]  px-4"
+          className="mb-[2rem] rounded-[1.25rem] px-4"
           alt="image that explain Question"
           width={450}
           height={450}

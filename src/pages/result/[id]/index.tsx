@@ -15,30 +15,39 @@ import { useRouter } from 'next/router';
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { HobbyType } from 'types/result';
+import { HobbyType, Recommendation, RecommendationType } from 'types/result';
 import GoogleAd from '@components/common/GoogleAd';
 
 import { CONFIG } from '@config';
-import { useRecoilState, useRecoilValue } from 'recoil';
-import { IsLoading } from 'store/atom';
+import { GetServerSideProps } from 'next';
+import axios from 'axios';
+import Link from 'next/link';
 const FIT_HOBBY_IMAGE_SRC = `${CONFIG.API_CLOUD}/images/etc/question-mark.png`;
 
-export default function Result() {
-  const router = useRouter();
-  const sliderRef = useRef<HTMLDivElement>(null);
-  const id = router?.query.id ?? 0;
-  const [isLoading, setIsLoading] = useRecoilState(IsLoading);
+interface ResultPageProps {
+  id: number;
+  recommendation: RecommendationType;
+  mbti: string;
+}
 
-  const { data } = useQuery(
-    ['getRecommendation', id],
-    () => getRecommendation(+id),
-    {
-      suspense: false,
-      enabled: !!id,
-    },
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const id = ctx.query.id;
+  const { data }: { data: Recommendation } = await axios.get(
+    `/recommendations/${id}`,
   );
-  const recommendation = data?.data?.data?.recommendation;
+  const recommendation = data.data.recommendation;
   const mbti = recommendation?.hobbyType.imageUrl.slice(55, 59);
+  return { props: { id, recommendation, mbti } };
+};
+
+export default function ResultPage({
+  id,
+  recommendation,
+  mbti,
+}: ResultPageProps) {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const sliderRef = useRef<HTMLDivElement>(null);
 
   const view = useMemo(() => {
     return router.query.view !== undefined ? router.query.view : '';
@@ -51,7 +60,6 @@ export default function Result() {
     });
   }, [view]);
 
-  if (isLoading) return <ResultLoader />;
   return (
     <div id="result" className="text-center" ref={sliderRef}>
       {!isLoading && (
@@ -68,6 +76,7 @@ export default function Result() {
         />
       )}
 
+      {isLoading && <ResultLoader />}
       <div className={`overflow-hidden ${(isLoading || !!view) && 'hidden'}`}>
         <section className="mt-6 flex flex-col items-center">
           <p className="font-AppleB text-2xl text-main-3">
@@ -76,7 +85,7 @@ export default function Result() {
           <div className="h-52 w-full">
             {mbti && (
               <Model
-                uri={`./static/gltf/${mbti}.gltf`}
+                uri={`../static/gltf/${mbti}.gltf`}
                 isLoading={isLoading}
                 setIsLoading={setIsLoading}
               />
@@ -123,35 +132,24 @@ export default function Result() {
               width={100}
               height={100}
               onClick={() => {
-                router.push({
-                  pathname: 'result',
-                  query: { id: id, view: 'fitHobby' },
-                });
+                router.push(`/result/${id}/fitHobby`);
               }}
             />
           </div>
           <div className="mt-16">
-            <div>
-              <Button
-                onClick={() => {
-                  router.push({
-                    pathname: 'result',
-                    query: { id: id, view: 'share' },
-                  });
-                }}
-                className="rounded-[1.875rem]"
-              >
-                공유하기
-              </Button>
-            </div>
-            <div className="mt-4">
-              <Button
-                onClick={() => router.push('/')}
-                className="rounded-[1.875rem]"
-              >
-                다시하기
-              </Button>
-            </div>
+            <Link
+              href={`/result/${id}/share`}
+              className="flex h-[4.375rem] w-full cursor-pointer items-center justify-center rounded-[1.875rem] bg-main-2 py-[1.25rem] text-[1.375rem]  font-normal  text-gray-8 ease-in hover:bg-main-4 disabled:cursor-not-allowed"
+            >
+              공유하기
+            </Link>
+            <Link
+              href="/"
+              className="mt-4 flex h-[4.375rem] w-full cursor-pointer items-center justify-center rounded-[1.875rem] bg-main-2 py-[1.25rem] text-[1.375rem]  font-normal  text-gray-8 ease-in hover:bg-main-4 disabled:cursor-not-allowed"
+            >
+              다시하기
+            </Link>
+
             <div className="h-[2.8125rem]" />
           </div>
         </section>

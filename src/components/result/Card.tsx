@@ -23,10 +23,7 @@ export default function Card({ hobby, id }: CardProps) {
         <Button
           small
           onClick={() => {
-            router.push({
-              pathname: 'result',
-              query: { id: id, view: 'hobbyDetail', hobbyid: hobby.id },
-            });
+            router.push(`/result/${id}/hobby-detail/${hobby.id}`);
           }}
           className="h-[3.5rem] rounded-[1.25rem] font-AppleM  text-[1.125rem] text-gray-7"
         >

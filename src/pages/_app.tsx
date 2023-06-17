@@ -7,6 +7,7 @@ import { Router } from 'next/router';
 import type { AppProps } from 'next/app';
 import Loader from '@components/common/Loader';
 import { CONFIG } from '@config';
+import axios from 'axios';
 const LOADING_IMAGE_SRC = `${CONFIG.API_CLOUD}/images/etc/loading.png`;
 
 const client = new QueryClient({
@@ -85,3 +86,16 @@ export default function App({ Component, pageProps }: AppProps) {
     </Layout>
   );
 }
+
+App.getInitialProps = async ({ Component, ctx }: any) => {
+  axios.defaults.baseURL = CONFIG.API_END_POINT;
+  axios.defaults.headers.common['Content-Type'] = 'application/json';
+
+  return {
+    pageProps: {
+      ...(Component.getInitialProps
+        ? await Component.getInitialProps(ctx)
+        : {}),
+    },
+  };
+};
